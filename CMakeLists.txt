@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.0)#要求最小版本
 project(myrpc)#给工程一个名字，不是可执行文件的名字
 
+# 生成debug版本，可以进行gdb调试
+set(CMAKE_BUILD_TYPE "Debug")
+
 # 编译配置选项，-g可以调试
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -g)
 

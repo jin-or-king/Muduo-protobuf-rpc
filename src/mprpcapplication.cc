@@ -4,6 +4,8 @@
 #include <unistd.h>
 using namespace std;
 
+MprpcConfig MprpcApplication::m_config;
+
 void ShowArgsHelp(){
     cout << "format: command -i <configfile>" << endl;
 }
@@ -37,8 +39,12 @@ void MprpcApplication::Init(int argc, char **argv){
     }
 
     // 开始加载配置文件 rpcserver_ip= rpcserver_port zookeeper_ip= zookepper_port= 
-
+    m_config.LoadConfigFile(config_file.c_str());
     
+    cout << "rpcserverip:" << m_config.Load("rpcserverip") << endl;
+    cout << "rpcserverport:" << m_config.Load("rpcserverport") << endl;
+    cout << "zookeeperip:" << m_config.Load("zookeeperip") << endl;
+    cout << "zookeeperport:" << m_config.Load("zookeeperport") << endl;
 }
 
 MprpcApplication& MprpcApplication::GetInstance(){
