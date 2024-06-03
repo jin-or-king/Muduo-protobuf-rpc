@@ -11,13 +11,13 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 # 配置头文件的搜索路径
-include_directories(${PROJECT_SOURCE_DIR}/src)
+include_directories(${PROJECT_SOURCE_DIR}/src/include)
 include_directories(${PROJECT_SOURCE_DIR}/example)
 
 # 设置项目库文件搜索路径
 link_directories(${PROJECT_SOURCE_DIR}/lib)
 
 # 指定搜索子目录
-# add_subdirectory(src) # 存放框架
+add_subdirectory(src) # 存放框架
 add_subdirectory(example) # 框架服务的消费者
 
