@@ -42,11 +42,13 @@ void RpcProvider::NotifyService(google::protobuf::Service* service)
 // 启动rpc服务节点，开始提供rpc远程网络调用服务
 void RpcProvider::Run()
 {
+    cout << "doing RpcProvider::Run!" << endl;
 
     string ip = MprpcApplication::GetInstance().GetConfig().Load("rpcserverip");
     // port是无符号int类型，Load传回来的是string类型，atoi需要char*。使用c_str转换为char*
     uint16_t port = atoi(MprpcApplication::GetInstance().GetConfig().Load("rpcserverport").c_str());
 
+    // 不直接使用socket，可以提供高并发的网络服务
     muduo::net::InetAddress address(ip, port);
     // 创建tcpserver对象
     muduo::net::TcpServer server(&m_eventLoop, address, "RpcProvider");
@@ -81,6 +83,8 @@ header_size(4个字节) + header_str + args_str
 // 建立连接用户的读写事件回调，如果远程有一个rpc服务的调用请求，那么OnMessage就会响应
 void RpcProvider::OnMessage(const muduo::net::TcpConnectionPtr& conn, muduo::net::Buffer* buffer, muduo::Timestamp)
 {
+    cout << "doing RpcProvider::OnMessage!" << endl;
+
     // 网络上接收的远程rpc调用请求的字符流 service_name,method_name args等等
     string recv_buf = buffer->retrieveAllAsString();
 
@@ -92,12 +96,12 @@ void RpcProvider::OnMessage(const muduo::net::TcpConnectionPtr& conn, muduo::net
     string rpc_header_str = recv_buf.substr(4, header_size);
     mprpc::RpcHeader rpcHeader;
     string service_name;
-    string methond_name;
+    string method_name;
     uint32_t args_size;
     if (rpcHeader.ParseFromString(rpc_header_str))
     {
         service_name = rpcHeader.service_name();
-        methond_name = rpcHeader.method_name();
+        method_name = rpcHeader.method_name();
         args_size = rpcHeader.args_size();
     }
     else
@@ -112,7 +116,7 @@ void RpcProvider::OnMessage(const muduo::net::TcpConnectionPtr& conn, muduo::net
     cout << "header_size" << header_size << endl;
     cout << "rpc_header_str" << rpc_header_str << endl;
     cout << "service_name" << service_name << endl;
-    cout << "methond_name" << methond_name << endl;
+    cout << "methond_name" << method_name << endl;
     cout << "args_size" << args_size << endl;
     cout << "===================================" << endl;
 
@@ -124,11 +128,15 @@ void RpcProvider::OnMessage(const muduo::net::TcpConnectionPtr& conn, muduo::net
         return ;
     }
 
-    auto mit = it->second.m_methodMap.find(methond_name);
+    auto mit = it->second.m_methodMap.find(method_name);
     if (mit == it->second.m_methodMap.end())    
     {
-        cout << service_name << ":" << methond_name << "is not exist" << endl;
+        cout << service_name << ":" << method_name << "is not exist" << endl;
         return ;
+    }
+    else
+    {
+        cout << service_name << ":" << method_name << " is finding" << endl;
     }
 
     // 获取service对象，new UserService
@@ -145,12 +153,14 @@ void RpcProvider::OnMessage(const muduo::net::TcpConnectionPtr& conn, muduo::net
     }
     google::protobuf::Message* response = service->GetResponsePrototype(method).New();
 
-    // 给调用的方法绑定一个closure回调函数
-    google::protobuf::Closure *done = google::protobuf::NewCallback<RpcProvider, const muduo::net::TcpConnectionPtr&, google::protobuf::Message*>(this, &RpcProvider::sendRpcResponse, conn, response);
+    // 给调用的方法绑定一个closure回调函数，效果类似bind
+    google::protobuf::Closure* done = google::protobuf::NewCallback<RpcProvider, const muduo::net::TcpConnectionPtr&, google::protobuf::Message*>(this, &RpcProvider::sendRpcResponse, conn, response);
 
     // 在框架上根据远端rpc请求，调用当前rpc节点上发布的方法，使用基类调用
     // new UserService().Login(controller, request, response, done)，done就是closure函数
     service->CallMethod(method, nullptr, request, response, done);
+
+    cout << "ending RpcProvider::OnMessage!" << endl;
 }
 
 // closure的回调操作，用于rpc的响应和网络发送
@@ -161,12 +171,13 @@ void RpcProvider::sendRpcResponse(const muduo::net::TcpConnectionPtr& conn, goog
     {
         // 序列化成功后将rpc的返回结果发送给调用方
         conn->send(response_str);
+        cout << "doing sendRpcResponse!" << endl;
     }
     else
     {
         cout << "serialize response_str error" << endl;
     }
-    
+
     // 主动断开连接，模拟http短链接服务
     conn->shutdown();
     
