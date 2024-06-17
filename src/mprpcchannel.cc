@@ -9,7 +9,7 @@
 #include "mprpcapplication.h"
 #include <unistd.h>
 #include "socketdeleter.h"
-
+#include "mprpccontroller.h"
 
 /*
 和框架读取消息流程相似，约定好调用格式
@@ -38,7 +38,10 @@ void MprpcChannnel::CallMethod(const google::protobuf::MethodDescriptor* method,
     }
     else
     {
-        std::cout << "serialize request error" << std::endl;
+        // std::cout << "serialize request error" << std::endl;
+        // 保存状态信息
+        controller->SetFailed("serialize request error");
+        return;
     }
     
     // 将解析出来的参数放入统一的proto中，通过protobuf来统一格式(自定义的头文件格式)
@@ -58,7 +61,8 @@ void MprpcChannnel::CallMethod(const google::protobuf::MethodDescriptor* method,
     }
     else
     {
-        std::cout << "error!" << std::endl;
+        // 保存状态信息
+        controller->SetFailed("serialize rpc_header_str error");
         return;
     }
 
@@ -82,8 +86,11 @@ void MprpcChannnel::CallMethod(const google::protobuf::MethodDescriptor* method,
     int clientfd = socket(AF_INET, SOCK_STREAM, 0);
     if (-1 == clientfd)
     {
-        std::cout << "create socket error" << errno << std::endl;
-        exit(EXIT_FAILURE);
+        char errtext[512] = {0};
+        sprintf(errtext, "create socket error:%d", errno);
+        // 保存状态信息
+        controller->SetFailed(errtext);
+        return;
     }
     
     // 使用std::unique_ptr来管理socket文件描述符
@@ -102,23 +109,28 @@ void MprpcChannnel::CallMethod(const google::protobuf::MethodDescriptor* method,
     // client和server进行连接
     if (-1 == connect(clientfd, (sockaddr *)&server_addr, sizeof(sockaddr_in)))
     {
-        std::cout << "connect server error" << std::endl;
-        exit(EXIT_FAILURE);
+        // 保存状态信息
+        controller->SetFailed("connect server error");
+        return;
     }
 
     // 发送rpc请求
     if (-1 == send(clientfd, send_rpc_str.c_str(), send_rpc_str.size(), 0))
     {
-        std::cout << "send error" << std::endl;
+        // 保存状态信息
+        controller->SetFailed("send rpc resquest error");
+        return;
     }
+    
 
     // 接受网络传输回来的数据流
     char recv_buf[1024] = {0};
     int recv_size = 0;
     if (-1 == (recv_size = (recv(clientfd, recv_buf, 1024, 0))))
     {
-        std::cout << "recv error" << std::endl;
-        return ;
+        // 保存状态信息
+        controller->SetFailed("send rpc recv error");
+        return;
     }
 
     // 数据流通过protobuf处理后为response格式，解析response
@@ -126,8 +138,9 @@ void MprpcChannnel::CallMethod(const google::protobuf::MethodDescriptor* method,
     // if (response->ParseFromString(response_str))
     if (!response->ParseFromArray(recv_buf, recv_size))
     {
-        std::cout << "parse error" << std::endl;
-        return ;
+        // 保存状态信息
+        controller->SetFailed("send rpc recv parse error");
+        return;
     }
     
     
