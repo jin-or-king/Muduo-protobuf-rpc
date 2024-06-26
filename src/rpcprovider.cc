@@ -4,6 +4,7 @@
 #include <functional>
 #include <google/protobuf/descriptor.h>
 #include "rpcheader.pb.h"
+#include "logger.h"
 using namespace std;
 
 /*
@@ -24,6 +25,7 @@ void RpcProvider::NotifyService(google::protobuf::Service* service)
     int methodCnt = pserviceDesc->method_count();
 
     cout << "service name" << service_name << endl;
+    LOG_INFO("service name:%s", service_name.c_str());
 
     for (int i = 0; i < methodCnt; ++i)
     {
@@ -32,6 +34,7 @@ void RpcProvider::NotifyService(google::protobuf::Service* service)
         string method_name = pmethodDesc->name();
         service_info.m_methodMap.insert({method_name, pmethodDesc});
         cout << "method name" << method_name << endl;
+        LOG_INFO("method name:%s", method_name.c_str());
     }
 
     service_info.m_service = service;

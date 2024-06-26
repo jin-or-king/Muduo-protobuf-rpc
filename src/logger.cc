@@ -1,7 +1,8 @@
 #include "logger.h"
+#include <iostream>
 
 // 单例日志
-static Logger::Logger& GetInstance()
+Logger& Logger::GetInstance()
 {
     static Logger logger;
     return logger;
@@ -30,11 +31,16 @@ Logger::Logger()
             std::string msg = m_lckQue.Pop();
             // 每条信息前面添加时间
             char time_buf[128];
-            sprintf(time_buf, "%d-%d-%d--> ", nowtm->tm_hour, nowtm->tm_min, nowtm->tm_sec);
+            sprintf(time_buf, "%d-%d-%d-->[%s] ", 
+                    nowtm->tm_hour, 
+                    nowtm->tm_min, 
+                    nowtm->tm_sec,
+                    (m_loglevel == static_cast<int>(LogLevel::INFO) ? "info" : "error"));
             msg.insert(0, time_buf);
+            msg.append("\n");
 
             // 如果队列为空，就可以先把文件关闭，假如一直有msg在队列中，就不用立即关闭
-            fput(msg.c_str(), pf);
+            fputs(msg.c_str(), pf);
             if (true)
             {
                 fclose(pf);
@@ -50,7 +56,7 @@ Logger::Logger()
 // 设置日志级别
 void Logger::SetLogLevel(LogLevel level)
 {
-    m_loglevel = level;
+    m_loglevel = static_cast<int>(level);
 }
 
 // 写日志，只需要将msg放入消息队列中就行

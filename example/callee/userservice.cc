@@ -3,6 +3,7 @@
 #include <string>
 #include "mprpcapplication.h"
 #include "rpcprovider.h"
+#include "logger.h"
 using namespace std;
 
 /*
@@ -80,6 +81,9 @@ public:
 };
 
 int main(int argc, char** argv){
+
+    LOG_INFO("FIRST LOG MESSAGE");
+    LOG_ERR("%s:%s:%d", __FILE__, __FUNCTION__, __LINE__);
     // 调用框架的初始操作
     MprpcApplication::Init(argc, argv);
 
